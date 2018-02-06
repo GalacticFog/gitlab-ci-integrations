@@ -49,7 +49,9 @@ Optional Variables (if set, enable callback to Gitlab to set the environment ext
 
 From the desired Gitlab Project:
 
-1) Copy `.gitlab-ci.yaml` to your Gitlab project.  If the project doesn't already have lambdas, you may copy `lambda1.py` and `lambda2.py` to the project as examples.
+1) Copy `.gitlab-ci.yaml` to your Gitlab project.   If the project doesn't already have lambdas, you may also copy `lambda1.py` and `lambda2.py` to the project as examples.
+
+Note that the `ci-lambda-deploy.sh` script is dynamically downloaded via the `CI_SCRIPT_URL` variable.  If you wish to avoid this remote dependency, the script may be copied locally into the gitlab project.
 
 2) Configure the following variables
 
@@ -64,17 +66,18 @@ From the desired Gitlab Project:
 
  Variables typically defined as Gitlab CI Secret Variables:
 
+ - Gestalt Variables (for trigging Lambda create/update in Gestalt Platform)
+
+         CI_SCRIPT_URL          Set to URL of Lambda deploy script
+         CI_URL                 Lambda deployment URL (Typically hosted by Gestalt Platform)
+         GF_API_KEY             Gestalt service account key (if authentication is required)
+         GF_API_SECRET          Gestalt service account secret (if authentication is required)
+
  - AWS Variables (for uploading lambda artifact(s) to S3):
 
          AWS_ACCESS_KEY_ID      AWS access key (typically for service account)
          AWS_SECRET_ACCESS_KEY  AWS secret key (typically for service account)
          S3_BUCKET_NAME         Target AWS S3 bucket name
-
- - Gestalt Variables (for trigging Lambda create/update in Gestalt Platform)
-
-         CI_URL                 Lambda deployment URL (Typically hosted by Gestalt Platform)
-         GF_API_KEY             Gestalt service account key (if authentication is required)
-         GF_API_SECRET          Gestalt service account secret (if authentication is required)
 
 ### 4) Perform a test build
 
