@@ -9,17 +9,18 @@
 #
 # Variables typically defined as Gitlab CI Secret Variables:
 #
+# - Gestalt Variables (for trigging Lambda create/update in Gestalt Platform)
+#
+#     CI_SCRIPT_URL          Set to URL of Lambda deploy script
+#     CI_URL                 Lambda deployment URL (Typically hosted by Gestalt Platform)
+#     GF_API_KEY             Gestalt service account key (if authentication is required)
+#     GF_API_SECRET          Gestalt service account secret (if authentication is required)
+#
 # - AWS Variables (for uploading lambda artifact(s) to S3):
 #
 #     AWS_ACCESS_KEY_ID      AWS access key (typically for service account)
 #     AWS_SECRET_ACCESS_KEY  AWS secret key (typically for service account)
 #     S3_BUCKET_NAME         Target AWS S3 bucket name
-#
-# - Gestalt Variables (for trigging Lambda create/update in Gestalt Platform)
-#
-#     CI_URL                 Lambda deployment URL (Typically hosted by Gestalt Platform)
-#     GF_API_KEY             Gestalt service account key (if authentication is required)
-#     GF_API_SECRET          Gestalt service account secret (if authentication is required)
 
 variables:
   LAMBDA_ENVIRONMENT_ID: e7b3ca8b-5b9a-4a51-8309-3ced4718e41f
@@ -27,7 +28,6 @@ variables:
   LAMBDA_ARTIFACTS: "*.py"
   LAMBDA_RUNTIME: python
   DEBUG: "true"
-  CI_SCRIPT: https://raw.githubusercontent.com/GalacticFog/gitlab-ci-integrations/master/ci-lambda-deploy.sh
 
 stages:
   - deploy
@@ -45,7 +45,7 @@ stages:
     # run CI Lambda deploy script, which uses 'LAMBDA_*' variables as well as
     # AWS_* and CI_URL variables.
     - pip install awscli
-    - curl $CI_SCRIPT > deploy.sh && chmod +x deploy.sh && ./deploy.sh deploy
+    - curl $CI_SCRIPT_URL > /tmp/ci && chmod +x /tmp/ci && /tmp/ci deploy
   except:
     - /^[Ww][Ii][Pp]-.*$/
 
@@ -54,36 +54,29 @@ stages:
   image: python:latest
   stage: deploy
   script:
-    - curl $CI_SCRIPT > deploy.sh && chmod +x deploy.sh && ./deploy.sh stop
-  environment:
-    action: stop
+    - curl $CI_SCRIPT_URL > /tmp/ci && chmod +x /tmp/ci && /tmp/ci stop
   when: manual
 
 
 # Automatic deploy triggered on check in to master
 auto_deploy_master:
   <<: *deploy
-  environment: development
   allow_failure: false
+  environment:
+      name: development
+      on_stop: stop_master
   only:
     - master
 
 # Manual deploy stage, run manually from Gitlab
 deploy_master:
   <<: *deploy
-  environment: development
-  allow_failure: true
-  when: manual
-
-
-stop_master:
-  <<: *stop
   environment:
-    name: development
-    action: stop
+      name: development
+      on_stop: stop_master
   only:
     - master
-
+  when: manual
 
 auto_deploy_review:
   <<: *deploy
@@ -97,11 +90,34 @@ auto_deploy_review:
   except:
     - master
 
+deploy_review:
+  <<: *deploy
+  environment:
+    # name: review/$CI_COMMIT_REF_SLUG
+    name: review/$CI_COMMIT_REF_NAME
+    on_stop: stop_review
+  only:
+    - branches
+  except:
+    - master
+  when: manual
+
+
+stop_master:
+  <<: *stop
+  environment:
+    name: development
+    action: stop
+  only:
+    - master
+
 stop_review:
   <<: *stop
   environment:
     # name: review/$CI_COMMIT_REF_SLUG
     name: review/$CI_COMMIT_REF_NAME
     action: stop
+  only:
+    - branches
   except:
     - master
