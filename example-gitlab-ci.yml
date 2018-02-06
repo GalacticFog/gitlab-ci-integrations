@@ -27,9 +27,9 @@ variables:
   LAMBDA_ARTIFACTS: "*.py"
   LAMBDA_RUNTIME: python
   DEBUG: "true"
+  CI_SCRIPT: https://raw.githubusercontent.com/GalacticFog/gitlab-ci-integrations/master/ci-lambda-deploy.sh
 
 stages:
-  # - build
   - deploy
 
 # build:
@@ -40,21 +40,30 @@ stages:
 .deploy_template: &deploy
   image: python:latest
   stage: deploy
-  environment: development
   script:
     # Install aws cli dependency for CI Lambda deploy script and
     # run CI Lambda deploy script, which uses 'LAMBDA_*' variables as well as
     # AWS_* and CI_URL variables.
     - pip install awscli
-    - ./.ci-lambda-deploy.sh
+    - curl $CI_SCRIPT > deploy.sh && chmod +x deploy.sh && ./deploy.sh deploy
   except:
     - /^[Ww][Ii][Pp]-.*$/
 
+
+.stop_template: &stop
+  image: python:latest
+  stage: deploy
+  script:
+    - curl $CI_SCRIPT > deploy.sh && chmod +x deploy.sh && ./deploy.sh stop
+  environment:
+    action: stop
+  when: manual
 
 
 # Automatic deploy triggered on check in to master
 auto_deploy_master:
   <<: *deploy
+  environment: development
   allow_failure: false
   only:
     - master
@@ -62,19 +71,16 @@ auto_deploy_master:
 # Manual deploy stage, run manually from Gitlab
 deploy_master:
   <<: *deploy
+  environment: development
   allow_failure: true
   when: manual
 
 
 stop_master:
-  image: python:latest
-  stage: deploy
-  script:
-    - ./.ci-lambda-deploy.sh stop
+  <<: *stop
   environment:
     name: development
     action: stop
-  when: manual
   only:
     - master
 
@@ -92,14 +98,10 @@ auto_deploy_review:
     - master
 
 stop_review:
-  image: python:latest
-  stage: deploy
-  script:
-    - ./.ci-lambda-deploy.sh stop
+  <<: *stop
   environment:
     # name: review/$CI_COMMIT_REF_SLUG
     name: review/$CI_COMMIT_REF_NAME
     action: stop
-  when: manual
   except:
     - master

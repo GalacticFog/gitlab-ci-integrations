@@ -5,23 +5,53 @@
 ## - For each lambda artifact - Upload the lambda file to S3, and
 ## - Publishes to Gestalt Platform to create/update the lambda resource with the S3 URL
 
-. .ci-functions.sh
+exit_with_error() {
+  echo "[Error] $@"
+  exit 1
+}
 
-[ ! -z $GF_API_KEY ] && [ -z $GF_API_SECRET ] && exit_with_error "GF_API_KEY provided, but GF_API_SECRET missing"
+exit_on_error() {
+  if [ $? -ne 0 ]; then
+    exit_with_error $1
+  fi
+}
 
-check_for_required_environment_variables \
-    S3_BUCKET_NAME \
-    CI_URL \
-    CI_COMMIT_SHA \
-    CI_COMMIT_REF_SLUG \
-    CI_PROJECT_NAME \
-    LAMBDA_ARTIFACTS \
-    LAMBDA_API \
-    LAMBDA_ENVIRONMENT_ID
+check_for_required_environment_variables() {
+  retval=0
 
-check_for_required_tools \
-    curl \
-    base64
+  for e in $@; do
+    if [ -z "${!e}" ]; then
+      echo "Required environment variable \"$e\" not defined."
+      retval=1
+    fi
+  done
+
+  if [ $retval -ne 0 ]; then
+    echo "One or more required environment variables not defined, aborting."
+    exit 1
+  else
+    echo "All required environment variables found."
+  fi
+}
+
+check_for_required_tools() {
+  retval=0
+
+  for t in $@; do
+    which $t > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        retval=1
+        echo "'$t' not found"
+    fi
+  done
+
+  if [ $retval -ne 0 ]; then
+    echo "One or more required tools not defined, aborting."
+    exit 1
+  else
+    echo "All required tools found."
+  fi
+}
 
 deploy() {
     check_for_required_tools \
@@ -99,6 +129,24 @@ call_gestalt() {
         echo "Error: Lambda deploy failed!"
     fi
 }
+
+# ----------------------------Main-------------------------------
+
+[ ! -z $GF_API_KEY ] && [ -z $GF_API_SECRET ] && exit_with_error "GF_API_KEY provided, but GF_API_SECRET missing"
+
+check_for_required_environment_variables \
+    S3_BUCKET_NAME \
+    CI_URL \
+    CI_COMMIT_SHA \
+    CI_COMMIT_REF_SLUG \
+    CI_PROJECT_NAME \
+    LAMBDA_ARTIFACTS \
+    LAMBDA_API \
+    LAMBDA_ENVIRONMENT_ID
+
+check_for_required_tools \
+    curl \
+    base64
 
 if [ "$1" == "stop" ]; then
     stop

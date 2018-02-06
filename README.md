@@ -49,7 +49,7 @@ Optional Variables (if set, enable callback to Gitlab to set the environment ext
 
 From the desired Gitlab Project:
 
-1) Copy `.ci-lambda-deploy.sh`, `.ci-functions.sh`, and `.gitlab-ci.yaml` to your Gitlab project.  If the project doesn't already have lambdas, you may copy `lambda1.py` and `lambda2.py` to the project as examples.
+1) Copy `.gitlab-ci.yaml` to your Gitlab project.  If the project doesn't already have lambdas, you may copy `lambda1.py` and `lambda2.py` to the project as examples.
 
 2) Configure the following variables
 
@@ -84,17 +84,13 @@ Once the deploy stage of the pipeline completes successfully, navigate to Gestal
 
 ## Files
 
-### `.ci-lambda-deploy.sh`
+### `ci-lambda-deploy.sh`
 
 Two functions, deploy and stop.
 
 **Deploy:** Uploads lambda artifacts to S3, and invokes the Gestalt deployment lambda to create/update lambda artifacts.
 
 **Stop:** Invokes the Gestalt deployment lambda to delete/remove the lambda in Gestalt.
-
-### `.ci-functions.sh`
-
-Include file for common functions.  Used by `.ci-lambda-deploy.sh`
 
 ### `.gitlab-ci.yaml`
 
